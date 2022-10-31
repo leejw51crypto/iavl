@@ -109,6 +109,7 @@ func newNodeDB(db dbm.DB, cacheSize int, opts *Options) *nodeDB {
 // GetNode gets a node from memory or disk. If it is an inner node, it does not
 // load its children.
 func (ndb *nodeDB) GetNode(hash []byte) (*Node, error) {
+	fmt.Printf("GetNode hash=%x\n", hash)
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
@@ -118,6 +119,7 @@ func (ndb *nodeDB) GetNode(hash []byte) (*Node, error) {
 
 	// Check the cache.
 	if cachedNode := ndb.nodeCache.Get(hash); cachedNode != nil {
+		fmt.Println("get cache ~~~~~~~~~~~~~~~~~~")
 		ndb.opts.Stat.IncCacheHitCnt()
 		return cachedNode.(*Node), nil
 	}
@@ -125,6 +127,7 @@ func (ndb *nodeDB) GetNode(hash []byte) (*Node, error) {
 	ndb.opts.Stat.IncCacheMissCnt()
 
 	// Doesn't exist, load.
+	fmt.Println("get db nodeKey")
 	buf, err := ndb.db.Get(ndb.nodeKey(hash))
 	if err != nil {
 		return nil, fmt.Errorf("can't get node %X: %v", hash, err)
@@ -146,6 +149,7 @@ func (ndb *nodeDB) GetNode(hash []byte) (*Node, error) {
 }
 
 func (ndb *nodeDB) GetFastNode(key []byte) (*fastnode.Node, error) {
+	fmt.Printf("GetFastNode key %s\n", string(key))
 	if !ndb.hasUpgradedToFastStorage() {
 		return nil, errors.New("storage version is not fast")
 	}
@@ -165,6 +169,7 @@ func (ndb *nodeDB) GetFastNode(key []byte) (*fastnode.Node, error) {
 	ndb.opts.Stat.IncFastCacheMissCnt()
 
 	// Doesn't exist, load.
+	fmt.Println("get db fastNodeKey")
 	buf, err := ndb.db.Get(ndb.fastNodeKey(key))
 	if err != nil {
 		return nil, fmt.Errorf("can't get FastNode %X: %w", key, err)
@@ -184,6 +189,7 @@ func (ndb *nodeDB) GetFastNode(key []byte) (*fastnode.Node, error) {
 
 // SaveNode saves a node to disk.
 func (ndb *nodeDB) SaveNode(node *Node) error {
+	fmt.Println("SaveNode")
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
@@ -213,6 +219,7 @@ func (ndb *nodeDB) SaveNode(node *Node) error {
 
 // SaveNode saves a FastNode to disk and add to cache.
 func (ndb *nodeDB) SaveFastNode(node *fastnode.Node) error {
+	fmt.Println("SaveFastNode")
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 	return ndb.saveFastNodeUnlocked(node, true)
@@ -333,6 +340,7 @@ func (ndb *nodeDB) Has(hash []byte) (bool, error) {
 // calls _hash() on the given node.
 // TODO refactor, maybe use hashWithCount() but provide a callback.
 func (ndb *nodeDB) SaveBranch(node *Node) ([]byte, error) {
+	fmt.Println("SaveBranch")
 	if node.persisted {
 		return node.hash, nil
 	}
@@ -378,6 +386,7 @@ func (ndb *nodeDB) SaveBranch(node *Node) ([]byte, error) {
 
 // resetBatch reset the db batch, keep low memory used
 func (ndb *nodeDB) resetBatch() error {
+	fmt.Println("resetBatch")
 	var err error
 	if ndb.opts.Sync {
 		err = ndb.batch.WriteSync()
@@ -400,6 +409,7 @@ func (ndb *nodeDB) resetBatch() error {
 // DeleteVersion deletes a tree version from disk.
 // calls deleteOrphans(version), deleteRoot(version, checkLatestVersion)
 func (ndb *nodeDB) DeleteVersion(version int64, checkLatestVersion bool) error {
+	fmt.Printf("DeleteVersion version %d  checkLatestVersion %v", version, checkLatestVersion)
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
@@ -421,6 +431,7 @@ func (ndb *nodeDB) DeleteVersion(version int64, checkLatestVersion bool) error {
 
 // DeleteVersionsFrom permanently deletes all tree versions from the given version upwards.
 func (ndb *nodeDB) DeleteVersionsFrom(version int64) error {
+	fmt.Printf("DeleteVersionsFrom version %d", version)
 	latest, err := ndb.getLatestVersion()
 	if err != nil {
 		return err
@@ -514,6 +525,7 @@ func (ndb *nodeDB) DeleteVersionsFrom(version int64) error {
 
 // DeleteVersionsRange deletes versions from an interval (not inclusive).
 func (ndb *nodeDB) DeleteVersionsRange(fromVersion, toVersion int64) error {
+	fmt.Printf("DeleteVersionsRange fromVersion %d toVersion %d", fromVersion, toVersion)
 	if fromVersion >= toVersion {
 		return errors.New("toVersion must be greater than fromVersion")
 	}
@@ -584,6 +596,7 @@ func (ndb *nodeDB) DeleteVersionsRange(fromVersion, toVersion int64) error {
 }
 
 func (ndb *nodeDB) DeleteFastNode(key []byte) error {
+	fmt.Printf("DeleteFastNode key %s", string(key))
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 	if err := ndb.batch.Delete(ndb.fastNodeKey(key)); err != nil {
@@ -596,6 +609,7 @@ func (ndb *nodeDB) DeleteFastNode(key []byte) error {
 // deleteNodesFrom deletes the given node and any descendants that have versions after the given
 // (inclusive). It is mainly used via LoadVersionForOverwriting, to delete the current version.
 func (ndb *nodeDB) deleteNodesFrom(version int64, hash []byte) error {
+	fmt.Printf("deleteNodesFrom version %d hash %x", version, hash)
 	if len(hash) == 0 {
 		return nil
 	}
@@ -631,6 +645,7 @@ func (ndb *nodeDB) deleteNodesFrom(version int64, hash []byte) error {
 // version: the new version being saved.
 // orphans: the orphan nodes created since version-1
 func (ndb *nodeDB) SaveOrphans(version int64, orphans map[string]int64) error {
+	fmt.Printf("SaveOrphans version %d ", version)
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
@@ -707,10 +722,12 @@ func (ndb *nodeDB) deleteOrphans(version int64) error {
 }
 
 func (ndb *nodeDB) nodeKey(hash []byte) []byte {
+	fmt.Printf("nodeKey: %x\n", hash)
 	return nodeKeyFormat.KeyBytes(hash)
 }
 
 func (ndb *nodeDB) fastNodeKey(key []byte) []byte {
+	fmt.Printf("fastNodeKey: %s\n", string(key))
 	return fastKeyFormat.KeyBytes(key)
 }
 
@@ -719,6 +736,7 @@ func (ndb *nodeDB) orphanKey(fromVersion, toVersion int64, hash []byte) []byte {
 }
 
 func (ndb *nodeDB) rootKey(version int64) []byte {
+	fmt.Printf("rootKey: %v\n", version)
 	return rootKeyFormat.Key(version)
 }
 
@@ -868,13 +886,16 @@ func (ndb *nodeDB) getFastIterator(start, end []byte, ascending bool) (dbm.Itera
 
 // Write to disk.
 func (ndb *nodeDB) Commit() error {
+	fmt.Println("Commit")
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
 	var err error
 	if ndb.opts.Sync {
+		fmt.Println("WriteSync")
 		err = ndb.batch.WriteSync()
 	} else {
+		fmt.Println("Write")
 		err = ndb.batch.Write()
 	}
 	if err != nil {
