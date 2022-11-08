@@ -20,5 +20,8 @@ func save(tree *iavl.MutableTree) {
 }
 
 func main() {
+	fmt.Println("###########################################")
+	fmt.Println("###########################################")
+	fmt.Println("###########################################")
 	RunProcess()
 }
