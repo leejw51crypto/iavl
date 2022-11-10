@@ -9,7 +9,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 )
 
-var USE_FORCE_STORAGE = false  // false: switch fastnode, legacy, true: force below
+var USE_FORCE_STORAGE = true   // false: switch fastnode, legacy, true: force below
 var USE_LEGACY_STORAGE = false //true: not use fast ndoe, false: use fast node
 var TX_COUNT int64 = 1
 
@@ -22,9 +22,13 @@ type Disk struct {
 func (disk *Disk) writeBlock(blockid int64) {
 	fmt.Printf("--------------------------\nwrite block %d\n", blockid)
 	var key = []byte("alice")
+	var key2 = []byte("bob")
+	var key3 = []byte("rabbit")
 	data := fmt.Sprintf("abc%d", blockid)
 	fmt.Printf("begin Set key %s  data %s\n", string(key), data)
 	disk.mytree.Set(key, []byte(data))
+	disk.mytree.Set(key2, []byte(data))
+	disk.mytree.Set(key3, []byte(data))
 	fmt.Println("end Set")
 }
 
