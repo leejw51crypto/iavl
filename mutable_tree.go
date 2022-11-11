@@ -76,7 +76,7 @@ func (tree *MutableTree) IsEmpty() bool {
 
 // VersionExists returns whether or not a version exists.
 func (tree *MutableTree) VersionExists(version int64) bool {
-	fmt.Printf("VersionExists: %d\n", version)
+	fmt.Printf("MutableTree VersionExists: %d\n", version)
 	tree.mtx.Lock()
 	defer tree.mtx.Unlock()
 
@@ -106,7 +106,7 @@ func (tree *MutableTree) AvailableVersions() []int {
 		}
 	}
 	sort.Ints(res)
-	fmt.Printf("AvailableVersions %v\n", res)
+	fmt.Printf("MutableTree AvailableVersions %v\n", res)
 	return res
 }
 
@@ -549,7 +549,7 @@ func (tree *MutableTree) LazyLoadVersion(targetVersion int64) (int64, error) {
 
 // Returns the version number of the latest version found
 func (tree *MutableTree) LoadVersion(targetVersion int64) (int64, error) {
-	fmt.Printf("LoadVersion %d ---------------------\n", targetVersion)
+	fmt.Printf("MutableTree LoadVersion %d ---------------------\n", targetVersion)
 	roots, err := tree.ndb.getRoots()
 	if err != nil {
 		return 0, err
@@ -621,14 +621,14 @@ func (tree *MutableTree) LoadVersion(targetVersion int64) (int64, error) {
 		}
 	}
 
-	fmt.Printf("LoadVersion target=%d  latest=%d done  ###################\n", targetVersion, latestVersion)
+	fmt.Printf("MutableTree LoadVersion target=%d  latest=%d done  ###################\n", targetVersion, latestVersion)
 	return latestVersion, nil
 }
 
 // LoadVersionForOverwriting attempts to load a tree at a previously committed
 // version, or the latest version below it. Any versions greater than targetVersion will be deleted.
 func (tree *MutableTree) LoadVersionForOverwriting(targetVersion int64) (int64, error) {
-	fmt.Printf("LoadVersionForOverwriting targetVersion=%d\n", targetVersion)
+	fmt.Printf("MutableTree LoadVersionForOverwriting targetVersion=%d -----------------------\n", targetVersion)
 	latestVersion, err := tree.LoadVersion(targetVersion)
 	if err != nil {
 		return latestVersion, err
@@ -721,7 +721,7 @@ func (tree *MutableTree) enableFastStorageAndCommitIfNotEnabled() (bool, error) 
 }
 
 func (tree *MutableTree) enableFastStorageAndCommitLocked() error {
-	fmt.Println("enableFastStorageAndCommitLocked")
+	fmt.Println("MutableTree enableFastStorageAndCommitLocked")
 	tree.mtx.Lock()
 	defer tree.mtx.Unlock()
 	return tree.enableFastStorageAndCommit()
@@ -767,7 +767,7 @@ func (tree *MutableTree) enableFastStorageAndCommit() error {
 func (tree *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 
 	rootHash, err := tree.ndb.getRoot(version)
-	fmt.Printf("GetImmutable root %x\n", rootHash)
+	fmt.Printf("MutableTree GetImmutable root %x\n", rootHash)
 	if err != nil {
 		return nil, err
 	}
@@ -787,7 +787,6 @@ func (tree *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 	}
 	tree.versions[version] = true
 
-	fmt.Println("before GetNode")
 	root, err := tree.ndb.GetNode(rootHash)
 	if err != nil {
 		return nil, err
@@ -803,7 +802,7 @@ func (tree *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 // Rollback resets the working tree to the latest saved version, discarding
 // any unsaved modifications.
 func (tree *MutableTree) Rollback() {
-	fmt.Printf("Rollback tree version %d", tree.version)
+	fmt.Printf("MutableTree Rollback tree version %d", tree.version)
 	if tree.version > 0 {
 		tree.ImmutableTree = tree.lastSaved.clone()
 	} else {
@@ -835,12 +834,12 @@ func (tree *MutableTree) GetVersioned(key []byte, version int64) ([]byte, error)
 
 			if isFastCacheEnabled {
 				fastNode, _ := tree.ndb.GetFastNode(key)
-				fmt.Printf("GetVersioned found fastnode %s\n", string(key))
+				fmt.Printf("MutableTree GetVersioned found fastnode %s\n", string(key))
 				if fastNode == nil && version == tree.ndb.latestVersion {
 					return nil, nil
 				}
 
-				fmt.Printf("GetVersioned fastnodeversion %v  version %v \n", fastNode.GetVersionLastUpdatedAt(), version)
+				fmt.Printf("MutableTree GetVersioned fastnodeversion %v  version %v \n", fastNode.GetVersionLastUpdatedAt(), version)
 				if fastNode != nil && fastNode.GetVersionLastUpdatedAt() <= version {
 					//if fastNode != nil {
 					return fastNode.GetValue(), nil
@@ -957,13 +956,16 @@ func (tree *MutableTree) SaveVersion() ([]byte, int64, error) {
 }
 
 func (tree *MutableTree) saveFastNodeVersion() error {
+	fmt.Println("MutableTree saveFastNodeVersion ----------------")
 	if err := tree.saveFastNodeAdditions(); err != nil {
 		return err
 	}
 	if err := tree.saveFastNodeRemovals(); err != nil {
 		return err
 	}
-	return tree.ndb.setFastStorageVersionToBatch()
+	ret := tree.ndb.setFastStorageVersionToBatch()
+	fmt.Println("MutableTree saveFastNodeVersion ################")
+	return ret
 }
 
 // nolint: unused
@@ -984,7 +986,7 @@ func (tree *MutableTree) addUnsavedAddition(key []byte, node *fastnode.Node) {
 }
 
 func (tree *MutableTree) saveFastNodeAdditions() error {
-	fmt.Println("MutableTree saveFastNodeAdditions")
+	fmt.Println("MutableTree saveFastNodeAdditions ----------------")
 	keysToSort := make([]string, 0, len(tree.unsavedFastNodeAdditions))
 	for key := range tree.unsavedFastNodeAdditions {
 		keysToSort = append(keysToSort, key)
@@ -996,6 +998,7 @@ func (tree *MutableTree) saveFastNodeAdditions() error {
 			return err
 		}
 	}
+	fmt.Println("MutableTree saveFastNodeAdditions ################")
 	return nil
 }
 
@@ -1006,6 +1009,7 @@ func (tree *MutableTree) addUnsavedRemoval(key []byte) {
 }
 
 func (tree *MutableTree) saveFastNodeRemovals() error {
+	fmt.Println("MutableTree saveFastNodeRemovals ----------------")
 	keysToSort := make([]string, 0, len(tree.unsavedFastNodeRemovals))
 	for key := range tree.unsavedFastNodeRemovals {
 		keysToSort = append(keysToSort, key)
@@ -1017,6 +1021,7 @@ func (tree *MutableTree) saveFastNodeRemovals() error {
 			return err
 		}
 	}
+	fmt.Println("MutableTree saveFastNodeRemovals ################")
 	return nil
 }
 

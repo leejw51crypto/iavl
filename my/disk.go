@@ -9,7 +9,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 )
 
-var USE_FORCE_STORAGE = true   // false: switch fastnode, legacy, true: force below
+var USE_FORCE_STORAGE = false  // false: switch fastnode, legacy, true: force below
 var USE_LEGACY_STORAGE = false //true: not use fast ndoe, false: use fast node
 var TX_COUNT int64 = 1
 
@@ -154,7 +154,7 @@ func (disk *Disk) process() {
 	fmt.Println("disk process")
 	disk.initialize()
 	disk.write()
-	//disk.read()
+	disk.read()
 	disk.mydb.Close()
 }
 func RunProcess() {

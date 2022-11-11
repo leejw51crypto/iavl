@@ -119,7 +119,7 @@ func (ndb *nodeDB) GetNode(hash []byte) (*Node, error) {
 
 	// Check the cache.
 	if cachedNode := ndb.nodeCache.Get(hash); cachedNode != nil {
-		fmt.Printf("nodeDB get cache key=%s data=%s\n", string(cachedNode.(*Node).key), string(cachedNode.(*Node).value))
+		fmt.Printf("nodeDB ndb.nodeCache.Get hash=%x cache key=%s data=%s\n", hash, string(cachedNode.(*Node).key), string(cachedNode.(*Node).value))
 		ndb.opts.Stat.IncCacheHitCnt()
 		return cachedNode.(*Node), nil
 	}
@@ -169,7 +169,7 @@ func (ndb *nodeDB) GetFastNode(key []byte) (*fastnode.Node, error) {
 	ndb.opts.Stat.IncFastCacheMissCnt()
 
 	// Doesn't exist, load.
-	fmt.Println("get db fastNodeKey")
+	fmt.Println("nodedb ndb.db.Get fastNodeKey")
 	buf, err := ndb.db.Get(ndb.fastNodeKey(key))
 	if err != nil {
 		return nil, fmt.Errorf("can't get FastNode %X: %w", key, err)
@@ -189,7 +189,7 @@ func (ndb *nodeDB) GetFastNode(key []byte) (*fastnode.Node, error) {
 
 // SaveNode saves a node to disk.
 func (ndb *nodeDB) SaveNode(node *Node) error {
-	fmt.Println("SaveNode")
+	fmt.Println("nodedb SaveNode")
 	ndb.mtx.Lock()
 	defer ndb.mtx.Unlock()
 
@@ -340,7 +340,7 @@ func (ndb *nodeDB) Has(hash []byte) (bool, error) {
 // calls _hash() on the given node.
 // TODO refactor, maybe use hashWithCount() but provide a callback.
 func (ndb *nodeDB) SaveBranch(node *Node) ([]byte, error) {
-	fmt.Println("SaveBranch")
+	fmt.Println("nodedb SaveBranch")
 	if node.persisted {
 		return node.hash, nil
 	}
@@ -386,7 +386,7 @@ func (ndb *nodeDB) SaveBranch(node *Node) ([]byte, error) {
 
 // resetBatch reset the db batch, keep low memory used
 func (ndb *nodeDB) resetBatch() error {
-	fmt.Println("resetBatch")
+	fmt.Println("nodedb resetBatch")
 	var err error
 	if ndb.opts.Sync {
 		err = ndb.batch.WriteSync()
